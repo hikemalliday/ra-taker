@@ -49,4 +49,3 @@ async def get_all_names(ctx):
 
 
 bot.run(BOT_TOKEN)
-
