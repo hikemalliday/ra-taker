@@ -39,25 +39,6 @@ async def on_command_error(ctx, error):
 
 @bot.command()
 async def take_ra(ctx):
-    """Output all player names in channel."""
-    if ctx.author.voice:
-        voice_channel = ctx.author.voice.channel
-        members = voice_channel.members
-        rows = []
-
-        for m in members:
-            output_name = NAMES_MAP.get(m.name, m.display_name)
-            rows.append(output_name)
-
-        results = "\n".join(rows)
-
-        await ctx.send(results)
-    else:
-        await ctx.send("❌ You’re not in a voice channel.")
-
-
-@bot.command()
-async def take_ra(ctx):
     try:
         if ctx.author.voice:
             voice_channel = ctx.author.voice.channel
