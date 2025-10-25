@@ -38,6 +38,7 @@ async def on_command_error(ctx, error):
 
 
 @bot.command()
+@commands.has_role("Officers")
 async def take_ra(ctx):
     try:
         if ctx.author.voice:
@@ -65,6 +66,32 @@ async def get_all_names(ctx):
         await ctx.send(results)
     else:
         await ctx.send("❌ You’re not in a voice channel.")
+
+
+@bot.command()
+@commands.has_role("Officers")
+async def take_all(ctx):
+    """Collects all members from all voice channels, excluding AFK"""
+    try:
+        guild = ctx.guild
+        afk_channel = guild.afk_channel  # AFK channel can be None if not set
+
+        collected_members = []
+
+        for channel in guild.voice_channels:
+            if afk_channel and channel.id == afk_channel.id:
+                continue  # skip AFK channel
+
+            for member in channel.members:
+                collected_members.append(NAMES_MAP.get(member.name, member.display_name))
+
+        if collected_members:
+            await ctx.send("\n".join(collected_members))
+        else:
+            await ctx.send("❌ No members found in any non-AFK voice channels.")
+    except Exception as e:
+        logger.exception("take_all crashed")
+        await ctx.send(f"❌ take_all failed: `{e}`")
 
 
 bot.run(BOT_TOKEN)
