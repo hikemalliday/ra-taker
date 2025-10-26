@@ -32,9 +32,16 @@ async def on_ready():
 # Global error handler
 @bot.event
 async def on_command_error(ctx, error):
+    # Ignore "Command not found" errors for empty or whitespace-only commands
+    if isinstance(error, commands.CommandNotFound):
+        command_name = str(error).split('"')[1]  # Extract command name from error msg
+        if not command_name.strip():  # Empty or just whitespace
+            return  # Silently ignore
+
+    # Handle other errors normally
     error_text = "".join(traceback.format_exception(type(error), error, error.__traceback__))
     logger.error(f"Error in command {ctx.command}:\n{error_text}")
-    await ctx.send(f"❌ Error: `{error}`")
+    await ctx.send(f"Error: `{error}`")
 
 
 @bot.command()
