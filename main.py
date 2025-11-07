@@ -2,7 +2,8 @@ import discord
 from discord.ext import commands
 import logging
 import traceback
-from config import BOT_TOKEN, NAMES_MAP
+import requests
+from config import BOT_TOKEN, NAMES_MAP, REST_URI
 
 logging.basicConfig(
     level=logging.INFO,  # INFO or DEBUG for more detail
@@ -50,6 +51,24 @@ async def take_ra(ctx):
             voice_channel = ctx.author.voice.channel
             members = voice_channel.members
             rows = [NAMES_MAP.get(m.name, m.display_name) for m in members]
+            await ctx.send("\n".join(rows))
+            await ctx.send(rows)
+        else:
+            await ctx.send("❌ You’re not in a voice channel.")
+    except Exception as e:
+        logger.exception("take_ra crashed")
+        await ctx.send(f"❌ take_ra failed: `{e}`")
+
+
+@bot.command()
+@commands.has_role("Officers")
+async def take_ra_and_post(ctx):
+    try:
+        if ctx.author.voice:
+            voice_channel = ctx.author.voice.channel
+            members = voice_channel.members
+            rows = [NAMES_MAP.get(m.name, m.display_name) for m in members]
+            response = requests.post(REST_URI, data={"players_list": rows})
             await ctx.send("\n".join(rows))
         else:
             await ctx.send("❌ You’re not in a voice channel.")
