@@ -70,7 +70,7 @@ async def take_ra_and_post(ctx):
             rows = [NAMES_MAP.get(m.name, m.display_name) for m in members]
             response = requests.post(
                 REST_URI,
-                data={"players_list": rows},
+                json={"players_list": rows},
                 headers={
                     "Authorization": f"Api-Key {API_KEY}"
                 }
