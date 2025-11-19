@@ -72,6 +72,7 @@ async def take_ra_and_post(ctx):
                 REST_URI,
                 data={"players_list": rows},
                 headers={
+                    "Api-Key": API_KEY,
                 }
             )
             if response.status_code in (200, 201):
