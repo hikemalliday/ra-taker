@@ -51,6 +51,17 @@ async def take_ra(ctx):
             voice_channel = ctx.author.voice.channel
             members = voice_channel.members
             rows = [NAMES_MAP.get(m.name, m.display_name) for m in members]
+            response = requests.post(
+                REST_URI,
+                json={"players_list": rows},
+                headers={
+                    "Authorization": f"Api-Key {API_KEY}"
+                }
+            )
+            if response.status_code in (200, 201):
+                await ctx.send("Success: 'raid to approve' has been sent to website ✅")
+            else:
+                await ctx.send("Error: could not send 'raid to approve' to website, dm Grixus pls ❌")
             await ctx.send("\n".join(rows))
             await ctx.send(rows)
         else:
