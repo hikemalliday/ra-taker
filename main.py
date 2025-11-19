@@ -3,7 +3,7 @@ from discord.ext import commands
 import logging
 import traceback
 import requests
-from config import BOT_TOKEN, NAMES_MAP, REST_URI
+from config import BOT_TOKEN, NAMES_MAP, REST_URI, API_KEY
 
 logging.basicConfig(
     level=logging.INFO,  # INFO or DEBUG for more detail
@@ -68,7 +68,14 @@ async def take_ra_and_post(ctx):
             voice_channel = ctx.author.voice.channel
             members = voice_channel.members
             rows = [NAMES_MAP.get(m.name, m.display_name) for m in members]
-            response = requests.post(REST_URI, data={"players_list": rows})
+            response = requests.post(
+                REST_URI,
+                data={"players_list": rows},
+                headers={
+                }
+            )
+            if response.status_code in (200, 201):
+                await ctx.send("Success: 'raid to approve' has been sent to website ✔")
             await ctx.send("\n".join(rows))
         else:
             await ctx.send("❌ You’re not in a voice channel.")
