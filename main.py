@@ -137,4 +137,10 @@ async def take_all(ctx):
         await ctx.send(f"❌ take_all failed: `{e}`")
 
 
+@bot.tree.command(name="test_slash", description="Just testing a slash command")
+async def test_slash(interaction: discord.Interaction):
+    await interaction.response.send_message("tested the slash command!")
+
+
+
 bot.run(BOT_TOKEN)
