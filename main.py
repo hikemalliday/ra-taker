@@ -24,8 +24,15 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+
+@bot.tree.command(name="test_slash", description="Just testing a slash command")
+async def test_slash(interaction: discord.Interaction):
+    await interaction.response.send_message("tested the slash command!")
+
+
 @bot.event
 async def on_ready():
+    await bot.tree.sync()
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
     logger.info(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
@@ -137,9 +144,7 @@ async def take_all(ctx):
         await ctx.send(f"❌ take_all failed: `{e}`")
 
 
-@bot.tree.command(name="test_slash", description="Just testing a slash command")
-async def test_slash(interaction: discord.Interaction):
-    await interaction.response.send_message("tested the slash command!")
+
 
 
 
