@@ -92,102 +92,92 @@ async def on_command_error(ctx, error):
     await ctx.send(f"Error: `{error}`")
 
 
-# @bot.command()
-# @commands.has_role("Officers")
-# async def take_ra(ctx):
-#     try:
-#         if ctx.author.voice:
-#             voice_channel = ctx.author.voice.channel
-#             members = voice_channel.members
-#             rows = [NAMES_MAP.get(m.name, m.display_name) for m in members]
-#             response = requests.post(
-#                 REST_URI,
-#                 json={"players_list": rows},
-#                 headers={
-#                     "Authorization": f"Api-Key {API_KEY}"
-#                 }
-#             )
-#             if response.status_code in (200, 201):
-#                 await ctx.send("Success: 'raid to approve' has been sent to website ✅")
-#             else:
-#                 await ctx.send("Error: could not send 'raid to approve' to website, dm Grixus pls ❌")
-#             await ctx.send("\n".join(rows))
-#             await ctx.send(rows)
-#         else:
-#             await ctx.send("❌ You’re not in a voice channel.")
-#     except Exception as e:
-#         logger.exception("take_ra crashed")
-#         await ctx.send(f"❌ take_ra failed: `{e}`")
+ALLOWED_ROLES = {"Officer", "Leader", "Comms"}
 
 
-# @bot.command()
-# @commands.has_role("Officers")
-# async def take_ra_and_post(ctx):
-#     try:
-#         if ctx.author.voice:
-#             voice_channel = ctx.author.voice.channel
-#             members = voice_channel.members
-#             rows = [NAMES_MAP.get(m.name, m.display_name) for m in members]
-#             response = requests.post(
-#                 REST_URI,
-#                 json={"players_list": rows},
-#                 headers={
-#                     "Authorization": f"Api-Key {API_KEY}"
-#                 }
-#             )
-#             if response.status_code in (200, 201):
-#                 await ctx.send("Success: 'raid to approve' has been sent to website ✔")
-#             await ctx.send("\n".join(rows))
-#         else:
-#             await ctx.send("❌ You’re not in a voice channel.")
-#     except Exception as e:
-#         logger.exception("take_ra crashed")
-#         await ctx.send(f"❌ take_ra failed: `{e}`")
+@bot.tree.command(name="mute_ra", description="Mute everyone in your voice channel except Officers/Leader/Comms")
+async def mute_ra(interaction: discord.Interaction):
+    try:
+        user = interaction.user
 
+        # Officer role check
+        if not any(role.name == "Officers" for role in getattr(user, "roles", [])):
+            return await interaction.response.send_message(
+                "❌ You need the Officers role to use this command.", ephemeral=True
+            )
 
-# @bot.command()
-# async def get_all_names(ctx):
-#     """Outputs all names associated to members in channel"""
-#     if ctx.author.voice:
-#         voice_channel = ctx.author.voice.channel
-#         members = voice_channel.members
-#
-#         rows = [f"{m.display_name}\t{m.name}#{m.discriminator}" for m in members]
-#         results = "\n".join(rows)
-#
-#         await ctx.send(results)
-#     else:
-#         await ctx.send("❌ You’re not in a voice channel.")
-#
-#
-# @bot.command()
-# @commands.has_role("Officers")
-# async def take_all(ctx):
-#     """Collects all members from all voice channels, excluding AFK"""
-#     try:
-#         guild = ctx.guild
-#         afk_channel = guild.afk_channel  # AFK channel can be None if not set
-#
-#         collected_members = []
-#
-#         for channel in guild.voice_channels:
-#             if afk_channel and channel.id == afk_channel.id:
-#                 continue  # skip AFK channel
-#
-#             for member in channel.members:
-#                 collected_members.append(NAMES_MAP.get(member.name, member.display_name))
-#
-#         if collected_members:
-#             await ctx.send("\n".join(collected_members))
-#         else:
-#             await ctx.send("❌ No members found in any non-AFK voice channels.")
-#     except Exception as e:
-#         logger.exception("take_all crashed")
-#         await ctx.send(f"❌ take_all failed: `{e}`")
+        # Voice channel check
+        if not (isinstance(user, discord.Member) and user.voice and user.voice.channel):
+            return await interaction.response.send_message(
+                "❌ You’re not in a voice channel.", ephemeral=True
+            )
+
+        voice_channel = user.voice.channel
+        members = voice_channel.members
+
+        muted = []
+        skipped = []
+
+        for m in members:
+            # Skip privileged roles
+            if any(r.name in ALLOWED_ROLES for r in m.roles):
+                skipped.append(m.display_name)
+                continue
+
+            try:
+                await m.edit(mute=True)
+                muted.append(m.display_name)
+            except Exception as e:
+                logger.warning(f"Failed to mute {m.display_name}: {e}")
+
+        msg = "🔇 **Muting complete:**\n"
+        # msg += f"**Muted:** {', '.join(muted) if muted else 'None'}\n"
+        # msg += f"**Skipped:** {', '.join(skipped) if skipped else 'None'}"
+
+        await interaction.response.send_message(msg)
+
+    except Exception as e:
+        logger.exception("mute_ra crashed")
+        await interaction.response.send_message(f"❌ mute_ra failed: `{e}`", ephemeral=True)
 
 
 
+@bot.tree.command(name="unmute_ra", description="Unmute everyone in your voice channel")
+async def unmute_ra(interaction: discord.Interaction):
+    try:
+        user = interaction.user
 
+        # Officer role check
+        if not any(role.name == "Officers" for role in getattr(user, "roles", [])):
+            return await interaction.response.send_message(
+                "❌ You need the Officers role to use this command.", ephemeral=True
+            )
+
+        # Voice channel check
+        if not (isinstance(user, discord.Member) and user.voice and user.voice.channel):
+            return await interaction.response.send_message(
+                "❌ You’re not in a voice channel.", ephemeral=True
+            )
+
+        voice_channel = user.voice.channel
+        members = voice_channel.members
+
+        unmuted = []
+
+        for m in members:
+            try:
+                await m.edit(mute=False)
+                unmuted.append(m.display_name)
+            except Exception as e:
+                logger.warning(f"Failed to unmute {m.display_name}: {e}")
+
+        await interaction.response.send_message(
+            f"🔊 **Everyone unmuted."
+        )
+
+    except Exception as e:
+        logger.exception("unmute_ra crashed")
+        await interaction.response.send_message(f"❌ unmute_ra failed: `{e}`", ephemeral=True)
 
 
 bot.run(BOT_TOKEN)
