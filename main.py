@@ -95,8 +95,8 @@ async def on_command_error(ctx, error):
 ALLOWED_ROLES = {"Officer", "Leader", "Comms"}
 
 
-@bot.tree.command(name="mute_ra", description="Mute everyone in your voice channel except Officers/Leader/Comms")
-async def mute_ra(interaction: discord.Interaction):
+@bot.tree.command(name="mute", description="Mute everyone in your voice channel except Officers/Leader/Comms")
+async def mute(interaction: discord.Interaction):
     try:
         user = interaction.user
 
@@ -142,8 +142,8 @@ async def mute_ra(interaction: discord.Interaction):
 
 
 
-@bot.tree.command(name="unmute_ra", description="Unmute everyone in your voice channel")
-async def unmute_ra(interaction: discord.Interaction):
+@bot.tree.command(name="unmute", description="Unmute everyone in your voice channel")
+async def unmute(interaction: discord.Interaction):
     try:
         user = interaction.user
 
