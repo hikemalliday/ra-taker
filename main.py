@@ -92,7 +92,7 @@ async def on_command_error(ctx, error):
     await ctx.send(f"Error: `{error}`")
 
 
-ALLOWED_ROLES = {"Officer", "Leader", "Comms"}
+ALLOWED_ROLES = {"Officers", "Leader", "Comms"}
 
 
 @bot.tree.command(name="mute", description="Mute everyone in your voice channel except Officers/Leader/Comms")
