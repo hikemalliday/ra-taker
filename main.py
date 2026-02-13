@@ -51,7 +51,8 @@ async def take_ra(interaction: discord.Interaction, raid_name: str):
             response = requests.post(
                 REST_URI,
                 json=payload,
-                headers={"Authorization": f"Api-Key {API_KEY}"}
+                headers={"Authorization": f"Api-Key {API_KEY}"},
+                verify=False  # Disable SSL verification for expired cert
             )
 
             if response.status_code in (200, 201):
