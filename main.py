@@ -41,7 +41,7 @@ async def take_ra(interaction: discord.Interaction, raid_name: str):
         if isinstance(user, discord.Member) and user.voice and user.voice.channel:
             voice_channel = user.voice.channel
             members = voice_channel.members
-            rows = [NAMES_MAP.get(m.name, m.display_name) for m in members]
+            rows = [[m.display_name, m.name] for m in members]
 
             payload = {
                 "raid_name": raid_name,
