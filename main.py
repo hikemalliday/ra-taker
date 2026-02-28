@@ -65,7 +65,8 @@ async def take_ra(interaction: discord.Interaction, raid_name: str):
                 )
 
             # Send the list of names as a follow-up
-            await interaction.followup.send("\n".join(rows))
+            names_to_show = [m.display_name for m in members]
+            await interaction.followup.send("\n".join(names_to_show))
         else:
             await interaction.response.send_message("❌ You’re not in a voice channel.", ephemeral=True)
     except Exception as e:
