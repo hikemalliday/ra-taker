@@ -1,14 +1,14 @@
-FROM python:3.11-slim
+FROM python:3.11-slim AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
-# Copy app files
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY --from=builder /wheels /wheels
+RUN pip install --no-cache-dir /wheels/*
 COPY . .
-
-# Default command
-CMD ["python", "main.py"]
