@@ -80,7 +80,7 @@ async def take_ra(interaction: discord.Interaction, raid_name: str):
                     e,
                 )
                 await interaction.edit_original_response(
-                    "❌ Error: could not send 'raid to approve' to website, DM Grixus pls"
+                    content="❌ Error: could not send 'raid to approve' to website, DM Grixus pls"
                 )
                 return
 
@@ -92,11 +92,11 @@ async def take_ra(interaction: discord.Interaction, raid_name: str):
 
             if response.status_code in (200, 201):
                 await interaction.edit_original_response(
-                    f"✅ Success: 'raid to approve' `{raid_name}` has been sent to website"
+                    content=f"✅ Success: 'raid to approve' `{raid_name}` has been sent to website"
                 )
             else:
                 await interaction.edit_original_response(
-                    "❌ Error: could not send 'raid to approve' to website, DM Grixus pls"
+                    content="❌ Error: could not send 'raid to approve' to website, DM Grixus pls"
                 )
 
             # Send the list of names as a follow-up
@@ -107,7 +107,7 @@ async def take_ra(interaction: discord.Interaction, raid_name: str):
     except Exception as e:
         logger.exception("take_ra crashed")
         if interaction.response.is_done():
-            await interaction.edit_original_response(f"❌ take_ra failed: `{e}`")
+            await interaction.edit_original_response(content=f"❌ take_ra failed: `{e}`")
         else:
             await interaction.response.send_message(f"❌ take_ra failed: `{e}`", ephemeral=True)
 
