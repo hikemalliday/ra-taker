@@ -1,8 +1,10 @@
+import asyncio
 import os
 import discord
 from discord.ext import commands
 from discord import app_commands
 import logging
+import time
 import traceback
 import requests
 from dotenv import load_dotenv
@@ -12,122 +14,6 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 REST_URI = os.getenv("REST_URI")
 API_KEY = os.getenv("API_KEY")
-
-NAMES_MAP = {
-    "titanuk": "Titanuk",
-    "silikten": "Silikten",
-    "chestrockwell3419": "Big G",
-    "saltycrackers": "Salty",
-    "saltyn123": "Saltyn",
-    "thors8694": "Mcoy",
-    "balutlv": "Gream",
-    "pok1858": "Pok",
-    "grixus.": "Grixus",
-    "hurl_": "Hurl",
-    "goblin6644#0": "Last Boss",
-    "noni3115": "Noni",
-    "shinaba": "Shinaba",
-    "shody123": "Shody",
-    "ungh": "Ungh",
-    "lethdar": "Lethdar",
-    "leggomayne": "Heelah",
-    "baronjune": "baronjune",
-    "fatalwan": "Fatalwan",
-    "keep__": "Keep",
-    "nuke9859": "Nuke",
-    "willan": "Willan",
-    "kano4861": "Kano",
-    "ksah": "Ksah",
-    ".ziero": "Rayd(lieth)",
-    "blueflower9": "Blueflower",
-    "cythix.ip": "Kugaz",
-    "koidokenmachete": "Machete",
-    "cybercop": "Cybercop",
-    "plag5944": "Sars",
-    "noidia": "Noidz",
-    "nba4400": "Nba",
-    ".firenz": "Firenz",
-    "ckombobreaker": "Ezpk",
-    "mortii2940": "Mortii",
-    "nocsucow": "Nocsucow",
-    "ledbedder": "Ledbedder",
-    "malagen": "Malagen",
-    "knife8187": "Knife",
-    "charming2340": "Charming",
-    "lucidnpc": "Genedin",
-    "rukmok": "Rukmok",
-    "themerkd": "Gasoline",
-    "vaporize1334": "Vaporise",
-    "reptoid_sol": "Reptoid",
-    "frodo4827": "Frodo",
-    "metroyd.": "Metroyd",
-    "deimos888": "Deimos",
-    "strut": "Strut",
-    "hazelnut0339": "Hazelnut",
-    "in_spir_e": "Inspire",
-    ".vantaris": "Violence",
-    "krunchh.": "Krunchh",
-    "bodied3": "Bodied",
-    "birdop": "Birdop",
-    "_sharknado": "Sharknado",
-    "pnboots": "Boomwiz",
-    "delune": "Delune",
-    "tranch1144": "Tranch",
-    "akp3533": "Kap",
-    "blarg2k": "Blarg2k",
-    "nuke4265": "Wisecrak",
-    "hagard_69334": "Hagard",
-    "skitter5007": "Skitter",
-    "beihr": "Beihr",
-    "boat6918": "boat",
-    "darkhorn.": "darkhorn",
-    "little8858": "Little",
-    "nerfed1": "Nerfed",
-    "kringe1060": "Kringe",
-    "smooth7398": "Taquisha",
-    "haydnt.": "Brobb",
-    "godhandgu": "Tune",
-    "ticeshotit": "Slimelord",
-    "cornisthebest": "Mendl",
-    ".faldorf": "Faldorf",
-    "_visible": "Visible",
-    "hyjal_": "Acarer",
-    "biglimey": "Biglime",
-    "lizard_eq99": "Shakirra",
-    "goatassin": "Goatassin",
-    "warlockezorn": "Zorn/Demonstab",
-    "vanco_lash": "Vanco",
-    "billieboyo": "Sangre",
-    "durant2323": "Iovvdovvn",
-    "producer": "Producer",
-    "schnnow": "Jokong/Jessie",
-    "aseplanker": "Azzar",
-    "moochie.kitty": "Ninja",
-    "uaeb": "Uaeb",
-    "shivalry3pt": "Threepeat",
-    "caldwillis": "Herban",
-    "mochadrone1975": "Exam",
-    "awakening6572": "Taeter",
-    "lazzarus1969": "Herbsaint",
-    "skeeter_": "Skeeter",
-    "aygok": "Aygok",
-    "o.g._mobbs": "Mandelgar",
-    "rawbinurhood": "Rawbin",
-    "jefu4791": "Jefu",
-    "boogs1332": "Ohhso",
-    "loritheandras": " Lori/Theandras",
-    "re.ef": "Reef",
-    "kajoo": "Kajoo",
-    "bigr_": "Ajax",
-    "pdunny": "Bannin/Haywire",
-    "namji": "Partymike",
-    "poopypants5181": "Reon",
-    "amberr08053": "Amberr",
-    "strikkerr": "Strikerr",
-    "jore9716": "Ranjore",
-    ".thievin": "Gram",
-    "ginlok": "Rickjames",
-}
 
 logging.basicConfig(
     level=logging.INFO,  # INFO or DEBUG for more detail
@@ -171,19 +57,45 @@ async def take_ra(interaction: discord.Interaction, raid_name: str):
                 "players_list": rows
             }
 
-            response = requests.post(
-                REST_URI,
-                json=payload,
-                headers={"Authorization": f"Api-Key {API_KEY}"},
-                # verify=False  # Disable SSL verification for expired cert
+            # Discord interactions must be acknowledged within about three seconds.
+            # Do this before the website call, which may legitimately take longer.
+            await interaction.response.defer(thinking=True)
+
+            started_at = time.perf_counter()
+            try:
+                # requests is synchronous.  Run it off the Discord event loop so a
+                # slow website cannot delay Discord's acknowledgement or other bot work.
+                response = await asyncio.to_thread(
+                    requests.post,
+                    REST_URI,
+                    json=payload,
+                    headers={"Authorization": f"Api-Key {API_KEY}"},
+                    timeout=(3.05, 15),  # connect timeout, then response timeout
+                    # verify=False  # Disable SSL verification for expired cert
+                )
+            except requests.RequestException as e:
+                logger.warning(
+                    "take_ra website request failed after %.2fs: %s",
+                    time.perf_counter() - started_at,
+                    e,
+                )
+                await interaction.edit_original_response(
+                    "❌ Error: could not send 'raid to approve' to website, DM Grixus pls"
+                )
+                return
+
+            logger.info(
+                "take_ra website request completed with HTTP %s in %.2fs",
+                response.status_code,
+                time.perf_counter() - started_at,
             )
 
             if response.status_code in (200, 201):
-                await interaction.response.send_message(
+                await interaction.edit_original_response(
                     f"✅ Success: 'raid to approve' `{raid_name}` has been sent to website"
                 )
             else:
-                await interaction.response.send_message(
+                await interaction.edit_original_response(
                     "❌ Error: could not send 'raid to approve' to website, DM Grixus pls"
                 )
 
@@ -194,7 +106,10 @@ async def take_ra(interaction: discord.Interaction, raid_name: str):
             await interaction.response.send_message("❌ You’re not in a voice channel.", ephemeral=True)
     except Exception as e:
         logger.exception("take_ra crashed")
-        await interaction.response.send_message(f"❌ take_ra failed: `{e}`", ephemeral=True)
+        if interaction.response.is_done():
+            await interaction.edit_original_response(f"❌ take_ra failed: `{e}`")
+        else:
+            await interaction.response.send_message(f"❌ take_ra failed: `{e}`", ephemeral=True)
 
 
 @bot.event
