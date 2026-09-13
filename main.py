@@ -8,12 +8,16 @@ import time
 import traceback
 import requests
 from dotenv import load_dotenv
+from typing import Optional
 
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 REST_URI = os.getenv("REST_URI")
+SCREENSHOT_REST_URI = os.getenv("SCREENSHOT_REST_URI")
 API_KEY = os.getenv("API_KEY")
+SCREENSHOT_ALLOWED_ROLES = {"Officers", "Leader", "Pker"}
+MAX_SCREENSHOT_SIZE_BYTES = 25 * 1024 * 1024
 
 logging.basicConfig(
     level=logging.INFO,  # INFO or DEBUG for more detail
@@ -110,6 +114,107 @@ async def take_ra(interaction: discord.Interaction, raid_name: str):
             await interaction.edit_original_response(content=f"❌ take_ra failed: `{e}`")
         else:
             await interaction.response.send_message(f"❌ take_ra failed: `{e}`", ephemeral=True)
+
+
+@bot.tree.command(name="screenshot", description="Upload a screenshot to the website")
+@app_commands.describe(
+    image="Image file to upload",
+    caption="Optional caption for the screenshot",
+)
+async def screenshot(
+    interaction: discord.Interaction,
+    image: discord.Attachment,
+    caption: Optional[str] = None,
+):
+    """Upload a slash-command attachment to the tracker screenshot gallery."""
+    try:
+        user = interaction.user
+        if not any(role.name in SCREENSHOT_ALLOWED_ROLES for role in getattr(user, "roles", [])):
+            return await interaction.response.send_message(
+                "❌ You need the Officers, Leader, or Pker role to use this command.",
+                ephemeral=True,
+            )
+
+        if image.size > MAX_SCREENSHOT_SIZE_BYTES:
+            return await interaction.response.send_message(
+                "❌ That image is too large. Please upload an image smaller than 25 MB.",
+                ephemeral=True,
+            )
+
+        # Discord interactions must be acknowledged within about three seconds.
+        # Downloading the attachment and sending it to the website can take longer.
+        await interaction.response.defer(thinking=True, ephemeral=True)
+
+        image_data = await image.read()
+        content_type = image.content_type or "application/octet-stream"
+        payload = {
+            "caption": caption or "",
+            "submitted_by_discord_id": str(user.id),
+            # An interaction ID is unique per command invocation and lets the API
+            # reject or safely handle accidental duplicate submissions.
+            "discord_message_id": str(interaction.id),
+        }
+
+        if not SCREENSHOT_REST_URI:
+            logger.error("SCREENSHOT_REST_URI is not configured")
+            await interaction.edit_original_response(
+                content="❌ Screenshot uploads are not configured yet. Please contact Grixus."
+            )
+            return
+
+        started_at = time.perf_counter()
+        try:
+            response = await asyncio.to_thread(
+                requests.post,
+                SCREENSHOT_REST_URI,
+                data=payload,
+                files={"image": (image.filename, image_data, content_type)},
+                headers={"Authorization": f"Api-Key {API_KEY}"},
+                timeout=(3.05, 30),
+            )
+        except requests.RequestException as exc:
+            logger.warning(
+                "screenshot website request failed after %.2fs: %s",
+                time.perf_counter() - started_at,
+                exc,
+            )
+            await interaction.edit_original_response(
+                content="❌ Could not upload the screenshot. Please try again later."
+            )
+            return
+
+        logger.info(
+            "screenshot website request completed with HTTP %s in %.2fs for user %s",
+            response.status_code,
+            time.perf_counter() - started_at,
+            user.id,
+        )
+
+        if response.status_code in (200, 201):
+            await interaction.edit_original_response(content="✅ Screenshot uploaded successfully.")
+        elif response.status_code == 400:
+            await interaction.edit_original_response(
+                content="❌ That file is not a valid image. Please choose a PNG, JPEG, WebP, or similar image."
+            )
+        elif response.status_code == 401:
+            logger.error("screenshot API key was rejected")
+            await interaction.edit_original_response(
+                content="❌ Screenshot uploads are temporarily unavailable. Please contact Grixus."
+            )
+        else:
+            await interaction.edit_original_response(
+                content="❌ Could not upload the screenshot. Please try again later."
+            )
+    except Exception:
+        logger.exception("screenshot crashed")
+        if interaction.response.is_done():
+            await interaction.edit_original_response(
+                content="❌ Could not upload the screenshot. Please try again later."
+            )
+        else:
+            await interaction.response.send_message(
+                "❌ Could not upload the screenshot. Please try again later.", ephemeral=True
+            )
 
 
 @bot.event
