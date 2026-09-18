@@ -30,6 +30,40 @@ logging.basicConfig(
 
 logger = logging.getLogger("discord_bot")
 
+
+def django_error_message(response: requests.Response) -> Optional[str]:
+    """Return a user-safe message from a JSON Django REST Framework error."""
+    try:
+        body = response.json()
+    except ValueError:
+        # Do not show an HTML error page (or a proxy's plain-text response) in Discord.
+        return None
+
+    if not isinstance(body, dict):
+        return None
+
+    # Our API uses ``error``; ``detail`` and field errors are DRF's usual shapes.
+    for key in ("error", "detail"):
+        value = body.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        if isinstance(value, list):
+            messages = [str(item).strip() for item in value if str(item).strip()]
+            if messages:
+                return "; ".join(messages)
+
+    field_errors = []
+    for field, value in body.items():
+        if field in {"error", "detail"}:
+            continue
+        messages = value if isinstance(value, list) else [value]
+        messages = [str(item).strip() for item in messages if str(item).strip()]
+        if messages:
+            field_errors.append(f"{field}: {'; '.join(messages)}")
+
+    return "; ".join(field_errors) or None
+
+
 # Intents are required for member info
 intents = discord.Intents.default()
 intents.voice_states = True
@@ -190,18 +224,22 @@ async def screenshot(
             user.id,
         )
 
-        if response.status_code in (200, 201):
+        if response.status_code == 201:
             await interaction.edit_original_response(content="✅ Screenshot uploaded successfully.")
-        elif response.status_code == 400:
-            await interaction.edit_original_response(
-                content="❌ That file is not a valid image. Please choose a PNG, JPEG, WebP, or similar image."
-            )
         elif response.status_code == 401:
             logger.error("screenshot API key was rejected")
             await interaction.edit_original_response(
                 content="❌ Screenshot uploads are temporarily unavailable. Please contact Grixus."
             )
         else:
+            error_message = django_error_message(response)
+            if error_message:
+                # Discord message content is limited to 2,000 characters.
+                await interaction.edit_original_response(
+                    content=f"❌ Screenshot upload failed: {error_message[:1_900]}"
+                )
+                return
+
             await interaction.edit_original_response(
                 content="❌ Could not upload the screenshot. Please try again later."
             )
